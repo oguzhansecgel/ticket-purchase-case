@@ -1,0 +1,29 @@
+spring:
+  application:
+    name: yerini-al
+  datasource:
+    url: jdbc:postgresql://localhost:5432/yerini_al_db
+    username: postgres
+    password: test
+  jpa:
+    hibernate:
+      ddl-auto: update
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        show_sql: true
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health, metrics, prometheus
+  metrics:
+    distribution:
+      percentiles-histogram:
+        http:
+          server:
+            requests: true
+      percentiles:
+        http:
+          server:
+            requests: 0.95, 0.99

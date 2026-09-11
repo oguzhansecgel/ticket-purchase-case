@@ -128,7 +128,7 @@ public class EventService {
             Event savedEvent = eventRepository.findById(event.id()).orElseThrow(() -> new NotFoundException("Event not found id: " + event.id()));
             savedEvent.setActive(false);
             eventRepository.save(savedEvent);
-            logger.info("isActive false event id: " + event.id());
+            logger.info("isActive false event id: {} ", event.id());
         }
     }
 

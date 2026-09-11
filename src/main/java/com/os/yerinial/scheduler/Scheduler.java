@@ -21,8 +21,9 @@ public class Scheduler {
         eventService.expiredEventDate();
     }
 
+    // eventDate süresi 3 gün geçmiş olanları dbden hard deleted yapar.
     @Scheduled(cron = "0 0 0 */3 * *")
     public void runEveryThreeDaysAtMidnight() {
-        // İşlemleriniz
+        eventService.expiredEventDateDays(3);
     }
 }

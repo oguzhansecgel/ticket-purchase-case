@@ -3,6 +3,7 @@ package com.os.yerinial.controller;
 import com.os.yerinial.model.dto.reservation.request.CreateReservationRequest;
 import com.os.yerinial.model.dto.reservation.response.CreateReservationSummaryResponse;
 import com.os.yerinial.service.ReservationService;
+import jakarta.validation.Valid;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.web.bind.annotation.*;
@@ -21,7 +22,7 @@ public class ReservationController {
     }
 
     @PostMapping("/create")
-    public CreateReservationSummaryResponse post(@RequestBody CreateReservationRequest request) {
+    public CreateReservationSummaryResponse post(@Valid @RequestBody CreateReservationRequest request) {
         logger.info(API_URL + "/create incoming request -> {}", request);
         return reservationService.createReservation(request);
     }

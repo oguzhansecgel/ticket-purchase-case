@@ -43,6 +43,10 @@ public class ReservationService {
             throw new EventDateExpiredException("event date expired");
         }
 
+        if (existingEvent.getAvailableCapacity() <= 0) {
+            throw new TicketSoldOutException("Tickets sold out");
+        }
+
         if (request.ticketCount() <= 0) {
             throw new InvalidTicketCountException("Invalid ticket count");
         }
@@ -65,7 +69,9 @@ public class ReservationService {
             existingEvent.setStatus(EventStatus.SOLD_OUT);
         }
         reservationRepository.save(createdReservation);
-
+        if (createdReservation.getEvent().getAvailableCapacity() == 0) {
+            createdReservation.getEvent().setStatus(EventStatus.SOLD_OUT);
+        }
         return new CreateReservationSummaryResponse(existingEvent.getId(),
                 existingCustomer.getId(),
                 existingEvent.getName(),
@@ -79,12 +85,12 @@ public class ReservationService {
         Reservation reservation = reservationRepository.findByIdWithEvent(reservationId)
                 .orElseThrow(() -> new NotFoundException("reservation not found id: " + reservationId));
 
-        if(reservation.getEvent().getStatus() == EventStatus.COMPLETED) {
-            throw new IllegalArgumentException("");
+        if (reservation.getEvent().getStatus() == EventStatus.COMPLETED) {
+            throw new EventHasBeenCompletedException("Event has been completed");
         }
 
         if (reservation.getStatus() == ReservationStatus.CANCELLED) {
-            throw new IllegalStateException("Already reservation cancelled");
+            throw new ReservationAlreadyCancelledException("Already reservation cancelled");
         }
 
         //TODO: son 24 saat ya da belirlenen bir süreden az kalma durumunda iptal edilememesi.

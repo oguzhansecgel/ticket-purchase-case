@@ -41,7 +41,7 @@ public interface EventRepository extends JpaRepository<Event, Long>, JpaSpecific
 
     @Modifying
     @Query("""
-            delete from Event e where e.id in :ids
+            update Event e  set e.isActive = false where e.id in :ids
             """)
-    void deleteAllEvent(@Param("ids") List<Long> ids);
+    void updateAllEvent(@Param("ids") List<Long> ids);
 }

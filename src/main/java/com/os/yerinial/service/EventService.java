@@ -68,7 +68,7 @@ public class EventService {
         event.setDescription(request.description());
         event.setEventImageUrl(request.eventImageUrl());
         event.setEventDate(request.eventDate());
-        event.setDescription(request.eventImageUrl());
+        event.setEventImageUrl(request.eventImageUrl());
         event.setTotalCapacity(request.totalCapacity());
         event.setAvailableCapacity(request.totalCapacity());
         event.setPrice(request.price());
@@ -131,7 +131,7 @@ public class EventService {
 
         List<Long> eventListIds = eventRepository.findByEventDateBefore(Instant.now().minus(expirationDay, ChronoUnit.DAYS))
                 .stream().map(GetEventById::id).toList();
-        eventRepository.deleteAllEvent(eventListIds);
+        eventRepository.updateAllEvent(eventListIds);
     }
 
     @Transactional

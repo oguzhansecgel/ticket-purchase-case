@@ -10,7 +10,6 @@ public record CreateReservationRequest(
         @NotNull
         Long eventId,
         @Max(10)
-        @Positive
         int ticketCount
 ) {
 }

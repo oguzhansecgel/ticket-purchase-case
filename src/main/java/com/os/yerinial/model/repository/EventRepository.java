@@ -3,10 +3,8 @@ package com.os.yerinial.model.repository;
 import com.os.yerinial.model.dto.event.response.GetEventById;
 import com.os.yerinial.model.dto.event.response.GetEventDetails;
 import com.os.yerinial.model.entity.Event;
-import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
-import org.springframework.data.jpa.repository.Modifying;
-import org.springframework.data.jpa.repository.Query;
+import jakarta.persistence.LockModeType;
+import org.springframework.data.jpa.repository.*;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
@@ -44,4 +42,7 @@ public interface EventRepository extends JpaRepository<Event, Long>, JpaSpecific
             update Event e  set e.isActive = false where e.id in :ids
             """)
     void updateAllEvent(@Param("ids") List<Long> ids);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    Event findByIdForUpdate();
 }

@@ -64,8 +64,8 @@ public class ReservationService {
         createdReservation.setTicketCount(request.ticketCount());
         createdReservation.setTotalPrice(totalPrice);
         createdReservation.setStatus(ReservationStatus.CONFIRMED);
-        int event = createdReservation.getEvent().getAvailableCapacity();
-        if (event == 0) {
+        Event event = eventRepository.findByIdForUpdate();
+        if (event.getAvailableCapacity() == 0) {
             existingEvent.setStatus(EventStatus.SOLD_OUT);
         }
         reservationRepository.save(createdReservation);

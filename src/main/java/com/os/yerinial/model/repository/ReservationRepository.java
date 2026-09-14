@@ -2,7 +2,9 @@ package com.os.yerinial.model.repository;
 
 import com.os.yerinial.model.dto.customer.response.GetCustomerReservationResponse;
 import com.os.yerinial.model.entity.Reservation;
+import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -30,6 +32,7 @@ public interface ReservationRepository extends JpaRepository<Reservation, Long> 
             """)
     List<GetCustomerReservationResponse> getAllByCustomer_Id(@Param("customerId") long customerId);
 
+    @Lock(LockModeType.PESSIMISTIC_READ)
     @Query("""
             select r from Reservation r
                         join fetch r.event

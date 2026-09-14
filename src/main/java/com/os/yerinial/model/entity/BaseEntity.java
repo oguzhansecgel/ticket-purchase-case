@@ -20,7 +20,7 @@ public abstract class BaseEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private long id;
 
-    private boolean isActive;
+    private boolean isActive = true;
 
     @CreatedDate
     private Instant createdAt;

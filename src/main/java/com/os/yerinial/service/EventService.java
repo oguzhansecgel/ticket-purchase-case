@@ -1,5 +1,6 @@
 package com.os.yerinial.service;
 
+import com.os.yerinial.exception.ExpirationDayNotNegativeException;
 import com.os.yerinial.exception.NotFoundException;
 import com.os.yerinial.model.dto.event.request.CreateEventRequest;
 import com.os.yerinial.model.dto.event.response.GetEventById;
@@ -25,6 +26,7 @@ import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.Objects;
 
 @Service
 public class EventService {
@@ -123,19 +125,19 @@ public class EventService {
 
     @Transactional
     public void expiredEventDateDays(int expirationDay) {
-        List<GetEventById> eventList = eventRepository.findByEventDateBefore(Instant.now().minus(expirationDay, ChronoUnit.DAYS));
-        for(GetEventById event: eventList) {
-            Event savedEvent = eventRepository.findById(event.id()).orElseThrow(() -> new NotFoundException("Event not found id: " + event.id()));
-            savedEvent.setActive(false);
-            eventRepository.save(savedEvent);
-            logger.info("isActive false event id: {} ", event.id());
+        if (expirationDay <= 0) {
+            throw new ExpirationDayNotNegativeException("expirationDay must be greater than zero");
         }
+
+        List<Long> eventListIds = eventRepository.findByEventDateBefore(Instant.now().minus(expirationDay, ChronoUnit.DAYS))
+                .stream().map(GetEventById::id).toList();
+        eventRepository.deleteAllEvent(eventListIds);
     }
 
     @Transactional
     public void expiredEventDate() {
-        List<GetEventDetails> getEventDetails =  eventRepository.findEventByIdAndActiveAndStatus();
-        for(GetEventDetails eventDetails: getEventDetails) {
+        List<GetEventDetails> getEventDetails = eventRepository.findEventByIdAndActiveAndStatus();
+        for (GetEventDetails eventDetails : getEventDetails) {
             Event savedEvent = eventRepository.findById(eventDetails.evetId()).orElseThrow(() -> new NotFoundException("Event not found id: " + eventDetails.evetId()));
             savedEvent.setStatus(EventStatus.COMPLETED);
             eventRepository.save(savedEvent);

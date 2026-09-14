@@ -38,4 +38,10 @@ public interface EventRepository extends JpaRepository<Event, Long>, JpaSpecific
             where e.isActive = true and (e.status = 'ACTIVE' or e.status = 'SOLD_OUT') and e.eventDate < current date 
             """)
     List<GetEventDetails> findEventByIdAndActiveAndStatus();
+
+    @Modifying
+    @Query("""
+            delete from Event e where e.id in :ids
+            """)
+    void deleteAllEvent(@Param("ids") List<Long> ids);
 }

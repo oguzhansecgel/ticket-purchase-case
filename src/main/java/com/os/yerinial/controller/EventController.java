@@ -53,6 +53,6 @@ public class EventController {
 
     @GetMapping("/check")
     public void check() {
-        eventService.expiredEventDateMinutes();
+        eventService.expiredEventDateDays(2);
     }
 }

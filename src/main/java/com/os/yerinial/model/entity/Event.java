@@ -32,6 +32,6 @@ public class Event extends BaseEntity{
     @JoinColumn(name = "venue_id", nullable = false)
     private Venue venue;
 
-    @OneToMany(mappedBy = "event", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OneToMany(mappedBy = "event")
     private List<Reservation> reservations = new ArrayList<>();
 }

@@ -29,8 +29,6 @@ public class ReservationService {
 
     @Transactional
     public CreateReservationSummaryResponse createReservation(CreateReservationRequest request) {
-        int updatedRows = eventRepository.decreaseCapacity(request.eventId(), request.ticketCount());
-
         Customer existingCustomer = customerRepository.findById(request.customerId())
                 .orElseThrow(() -> new NotFoundException("customer not found id: " + request.customerId()));
 
@@ -45,12 +43,14 @@ public class ReservationService {
             throw new EventDateExpiredException("event date expired");
         }
 
-        if (updatedRows == 0) {
-            throw new InsufficientCapacityException("insufficient stock");
-        }
-
         if (request.ticketCount() <= 0) {
             throw new InvalidTicketCountException("Invalid ticket count");
+        }
+
+        int updatedRows = eventRepository.decreaseCapacity(request.eventId(), request.ticketCount());
+
+        if (updatedRows == 0) {
+            throw new InsufficientCapacityException("insufficient stock");
         }
 
         double totalPrice = request.ticketCount() * existingEvent.getPrice();

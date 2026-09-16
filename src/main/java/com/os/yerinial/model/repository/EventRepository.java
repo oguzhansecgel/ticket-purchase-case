@@ -44,5 +44,6 @@ public interface EventRepository extends JpaRepository<Event, Long>, JpaSpecific
     void updateAllEvent(@Param("ids") List<Long> ids);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
-    Event findByIdForUpdate();
+    @Query("select e from Event e where e.id = :eventId")
+    Optional<Event> findByIdForUpdate(@Param("eventId") Long eventId);
 }

@@ -32,8 +32,20 @@ public class ReservationService {
         Customer existingCustomer = customerRepository.findById(request.customerId())
                 .orElseThrow(() -> new NotFoundException("customer not found id: " + request.customerId()));
 
-        Event existingEvent = eventRepository.findById(request.eventId())
+        Event existingEvent = eventRepository.findByIdForUpdate(request.eventId())
                 .orElseThrow(() -> new NotFoundException("event not found id: " + request.eventId()));
+
+        if (existingEvent.getAvailableCapacity() < request.ticketCount()) {
+            throw new InsufficientCapacityException("insufficient stock");
+        }
+
+        existingEvent.setAvailableCapacity(
+                existingEvent.getAvailableCapacity() - request.ticketCount()
+        );
+
+        if (existingEvent.getAvailableCapacity() == 0) {
+            existingEvent.setStatus(EventStatus.SOLD_OUT);
+        }
 
         if (!existingEvent.getStatus().equals(EventStatus.ACTIVE)) {
             throw new EventNotActiveException("event not active");
@@ -51,12 +63,6 @@ public class ReservationService {
             throw new InvalidTicketCountException("Invalid ticket count");
         }
 
-        int updatedRows = eventRepository.decreaseCapacity(request.eventId(), request.ticketCount());
-
-        if (updatedRows == 0) {
-            throw new InsufficientCapacityException("insufficient stock");
-        }
-
         double totalPrice = request.ticketCount() * existingEvent.getPrice();
         Reservation createdReservation = new Reservation();
         createdReservation.setCustomer(existingCustomer);
@@ -64,10 +70,7 @@ public class ReservationService {
         createdReservation.setTicketCount(request.ticketCount());
         createdReservation.setTotalPrice(totalPrice);
         createdReservation.setStatus(ReservationStatus.CONFIRMED);
-        Event event = eventRepository.findByIdForUpdate();
-        if (event.getAvailableCapacity() == 0) {
-            existingEvent.setStatus(EventStatus.SOLD_OUT);
-        }
+
         reservationRepository.save(createdReservation);
         if (createdReservation.getEvent().getAvailableCapacity() == 0) {
             createdReservation.getEvent().setStatus(EventStatus.SOLD_OUT);

@@ -5,7 +5,6 @@ import com.os.yerinial.model.entity.Reservation;
 import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
-import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -32,7 +31,7 @@ public interface ReservationRepository extends JpaRepository<Reservation, Long> 
             """)
     List<GetCustomerReservationResponse> getAllByCustomer_Id(@Param("customerId") long customerId);
 
-    @Lock(LockModeType.PESSIMISTIC_READ)
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("""
             select r from Reservation r
                         join fetch r.event

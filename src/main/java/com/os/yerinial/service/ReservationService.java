@@ -43,11 +43,11 @@ public class ReservationService {
                 existingEvent.getAvailableCapacity() - request.ticketCount()
         );
 
-        if (existingEvent.getAvailableCapacity() == 0) {
-            existingEvent.setStatus(EventStatus.SOLD_OUT);
+        if (request.ticketCount() <= 0) {
+            throw new InvalidTicketCountException("Invalid ticket count");
         }
 
-        if (!existingEvent.getStatus().equals(EventStatus.ACTIVE)) {
+        if (existingEvent.getStatus() != EventStatus.ACTIVE) {
             throw new EventNotActiveException("event not active");
         }
 
@@ -55,12 +55,16 @@ public class ReservationService {
             throw new EventDateExpiredException("event date expired");
         }
 
-        if (existingEvent.getAvailableCapacity() <= 0) {
-            throw new TicketSoldOutException("Tickets sold out");
+        if (existingEvent.getAvailableCapacity() < request.ticketCount()) {
+            throw new InsufficientCapacityException("insufficient stock");
         }
 
-        if (request.ticketCount() <= 0) {
-            throw new InvalidTicketCountException("Invalid ticket count");
+        existingEvent.setAvailableCapacity(
+                existingEvent.getAvailableCapacity() - request.ticketCount()
+        );
+
+        if (existingEvent.getAvailableCapacity() == 0) {
+            existingEvent.setStatus(EventStatus.SOLD_OUT);
         }
 
         double totalPrice = request.ticketCount() * existingEvent.getPrice();

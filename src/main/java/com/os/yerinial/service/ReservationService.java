@@ -35,10 +35,6 @@ public class ReservationService {
         Event existingEvent = eventRepository.findByIdForUpdate(request.eventId())
                 .orElseThrow(() -> new NotFoundException("event not found id: " + request.eventId()));
 
-        existingEvent.setAvailableCapacity(
-                existingEvent.getAvailableCapacity() - request.ticketCount()
-        );
-
         if (request.ticketCount() <= 0) {
             throw new InvalidTicketCountException("Invalid ticket count");
         }

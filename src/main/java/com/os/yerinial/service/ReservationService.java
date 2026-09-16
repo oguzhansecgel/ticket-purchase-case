@@ -1,16 +1,21 @@
 package com.os.yerinial.service;
 
 import com.os.yerinial.exception.*;
+import com.os.yerinial.metrics.MetricsOutcome;
+import com.os.yerinial.metrics.ReservationMetricOperation;
+import com.os.yerinial.metrics.ReservationMetrics;
 import com.os.yerinial.model.dto.reservation.request.CreateReservationRequest;
 import com.os.yerinial.model.dto.reservation.response.CreateReservationSummaryResponse;
 import com.os.yerinial.model.entity.*;
 import com.os.yerinial.model.repository.CustomerRepository;
 import com.os.yerinial.model.repository.EventRepository;
 import com.os.yerinial.model.repository.ReservationRepository;
+import io.micrometer.core.instrument.binder.http.Outcome;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 
 @Service
 public class ReservationService {
@@ -18,13 +23,16 @@ public class ReservationService {
     private final EventRepository eventRepository;
     private final CustomerRepository customerRepository;
     private final ReservationRepository reservationRepository;
+    private final ReservationMetrics reservationMetrics;
 
     public ReservationService(EventRepository eventRepository,
                               CustomerRepository customerRepository,
-                              ReservationRepository reservationRepository) {
+                              ReservationRepository reservationRepository,
+                              ReservationMetrics reservationMetrics) {
         this.eventRepository = eventRepository;
         this.customerRepository = customerRepository;
         this.reservationRepository = reservationRepository;
+        this.reservationMetrics = reservationMetrics;
     }
 
     @Transactional
@@ -68,6 +76,7 @@ public class ReservationService {
         createdReservation.setStatus(ReservationStatus.CONFIRMED);
 
         reservationRepository.save(createdReservation);
+        reservationMetrics.reservationOperationIncrement(ReservationMetricOperation.CREATE, MetricsOutcome.SUCCESS);
         if (createdReservation.getEvent().getAvailableCapacity() == 0) {
             createdReservation.getEvent().setStatus(EventStatus.SOLD_OUT);
         }
@@ -92,7 +101,10 @@ public class ReservationService {
             throw new ReservationAlreadyCancelledException("Already reservation cancelled");
         }
 
-        //TODO: son 24 saat ya da belirlenen bir süreden az kalma durumunda iptal edilememesi.
+        if(reservation.getEvent().getEventDate().isBefore(Instant.now().plus(23, ChronoUnit.HOURS).plus(59, ChronoUnit.MINUTES))) {
+            throw new ReservationCancellationTooLateException("Reservation not cancelled last 24 hours");
+        }
+
         if (reservation.getEvent().getAvailableCapacity() == 0) {
             Event event = reservation.getEvent();
             event.setStatus(EventStatus.ACTIVE);
@@ -102,7 +114,7 @@ public class ReservationService {
             Event event = reservation.getEvent();
             event.setAvailableCapacity(event.getAvailableCapacity() + reservation.getTicketCount());
         }
-
+        reservationMetrics.reservationOperationIncrement(ReservationMetricOperation.CANCEL, MetricsOutcome.SUCCESS);
         reservation.setStatus(ReservationStatus.CANCELLED);
     }
 }

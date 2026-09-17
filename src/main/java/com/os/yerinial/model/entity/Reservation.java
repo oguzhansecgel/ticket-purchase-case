@@ -26,6 +26,6 @@ public class Reservation extends BaseEntity{
 
     private double totalPrice;
 
-    //@Enumerated(EnumType.STRING)
+    @Enumerated(EnumType.STRING)
     private ReservationStatus status;
 }

@@ -1,0 +1,5 @@
+ALTER TABLE events
+ALTER COLUMN price TYPE DECIMAL(18,2) USING price::DECIMAL(18,2);
+
+ALTER TABLE reservations
+ALTER COLUMN total_price TYPE DECIMAL(18,2) USING total_price::DECIMAL(18,2);

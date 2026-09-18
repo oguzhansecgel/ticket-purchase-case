@@ -1,10 +1,12 @@
 package com.os.yerinial.model.dto.reservation.response;
 
+import java.math.BigDecimal;
+
 public record CreateReservationSummaryResponse(
         Long eventId,
         Long customerId,
         String eventName,
-        double totalPrice,
+        BigDecimal totalPrice,
         int ticketCount
 ) {
 }

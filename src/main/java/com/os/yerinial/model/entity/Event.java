@@ -6,6 +6,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
@@ -22,7 +23,7 @@ public class Event extends BaseEntity{
     private String description;
     private String eventImageUrl;
     private Instant eventDate;
-    private double price;
+    private BigDecimal price;
     private int totalCapacity;
     private int availableCapacity;
     @Enumerated(EnumType.STRING)

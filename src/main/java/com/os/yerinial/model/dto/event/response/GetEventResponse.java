@@ -2,6 +2,7 @@ package com.os.yerinial.model.dto.event.response;
 
 import com.os.yerinial.model.entity.EventStatus;
 
+import java.math.BigDecimal;
 import java.time.Instant;
 
 public record GetEventResponse(
@@ -12,7 +13,7 @@ public record GetEventResponse(
         String eventImage,
         String venueImage,
         String city,
-        double price,
+        BigDecimal price,
         int availableCapacity,
         EventStatus status
 ) {

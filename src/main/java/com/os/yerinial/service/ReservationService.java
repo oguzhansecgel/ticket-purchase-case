@@ -14,6 +14,7 @@ import io.micrometer.core.instrument.binder.http.Outcome;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 
@@ -24,15 +25,17 @@ public class ReservationService {
     private final CustomerRepository customerRepository;
     private final ReservationRepository reservationRepository;
     private final ReservationMetrics reservationMetrics;
-
+    private final PaymentService paymentService;
     public ReservationService(EventRepository eventRepository,
                               CustomerRepository customerRepository,
                               ReservationRepository reservationRepository,
-                              ReservationMetrics reservationMetrics) {
+                              ReservationMetrics reservationMetrics,
+                              PaymentService paymentService) {
         this.eventRepository = eventRepository;
         this.customerRepository = customerRepository;
         this.reservationRepository = reservationRepository;
         this.reservationMetrics = reservationMetrics;
+        this.paymentService = paymentService;
     }
 
     @Transactional
@@ -67,7 +70,7 @@ public class ReservationService {
             existingEvent.setStatus(EventStatus.SOLD_OUT);
         }
 
-        double totalPrice = request.ticketCount() * existingEvent.getPrice();
+        BigDecimal totalPrice = existingEvent.getPrice().multiply(BigDecimal.valueOf(request.ticketCount()));
         Reservation createdReservation = new Reservation();
         createdReservation.setCustomer(existingCustomer);
         createdReservation.setEvent(existingEvent);
@@ -77,6 +80,11 @@ public class ReservationService {
 
         reservationRepository.save(createdReservation);
         reservationMetrics.reservationOperationIncrement(ReservationMetricOperation.CREATE, MetricsOutcome.SUCCESS);
+        try {
+
+        } catch (Exception e) {
+
+        }
         if (createdReservation.getEvent().getAvailableCapacity() == 0) {
             createdReservation.getEvent().setStatus(EventStatus.SOLD_OUT);
         }

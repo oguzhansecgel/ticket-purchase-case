@@ -2,5 +2,6 @@ package com.os.yerinial.model.entity;
 
 public enum ReservationStatus {
     CONFIRMED,
-    CANCELLED
+    CANCELLED,
+    PAYMENT_FAILED
 }

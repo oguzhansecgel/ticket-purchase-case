@@ -29,3 +29,9 @@ management:
         http:
           server:
             requests: 0.95, 0.99
+
+iyzico:
+  payment:
+    api-key: ${API_KEY}
+    secret-key: ${SECRET_KEY}
+    base-url: ${BASE_URL}

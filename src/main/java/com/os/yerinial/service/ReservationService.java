@@ -4,6 +4,7 @@ import com.os.yerinial.exception.*;
 import com.os.yerinial.metrics.MetricsOutcome;
 import com.os.yerinial.metrics.ReservationMetricOperation;
 import com.os.yerinial.metrics.ReservationMetrics;
+import com.os.yerinial.model.dto.payment.request.CreatePaymentRequest;
 import com.os.yerinial.model.dto.reservation.request.CreateReservationRequest;
 import com.os.yerinial.model.dto.reservation.response.CreateReservationSummaryResponse;
 import com.os.yerinial.model.entity.*;
@@ -17,6 +18,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.util.List;
 
 @Service
 public class ReservationService {
@@ -76,15 +78,14 @@ public class ReservationService {
         createdReservation.setEvent(existingEvent);
         createdReservation.setTicketCount(request.ticketCount());
         createdReservation.setTotalPrice(totalPrice);
+
+        var paymentRequest = preparePaymentRequest(request, existingCustomer, existingEvent, createdReservation);
+        paymentService.createPayment(paymentRequest);
         createdReservation.setStatus(ReservationStatus.CONFIRMED);
 
         reservationRepository.save(createdReservation);
         reservationMetrics.reservationOperationIncrement(ReservationMetricOperation.CREATE, MetricsOutcome.SUCCESS);
-        try {
 
-        } catch (Exception e) {
-
-        }
         if (createdReservation.getEvent().getAvailableCapacity() == 0) {
             createdReservation.getEvent().setStatus(EventStatus.SOLD_OUT);
         }
@@ -124,5 +125,74 @@ public class ReservationService {
         }
         reservationMetrics.reservationOperationIncrement(ReservationMetricOperation.CANCEL, MetricsOutcome.SUCCESS);
         reservation.setStatus(ReservationStatus.CANCELLED);
+    }
+
+    private com.os.yerinial.model.dto.payment.request.CreatePaymentRequest preparePaymentRequest(
+            CreateReservationRequest reservationRequest,
+            Customer customer,
+            Event event,
+            Reservation reservation) {
+
+        BigDecimal totalPrice = event.getPrice().multiply(BigDecimal.valueOf(reservation.getTicketCount()));
+
+        var basketItems = List.of(
+                new com.os.yerinial.model.dto.payment.request.CreatePaymentRequest.BasketItemRequest(
+                        String.valueOf(event.getId()),
+                        event.getName() + " Bileti",
+                        "Etkinlik",
+                        "Bilet",
+                        "VIRTUAL",
+                        totalPrice
+                )
+        );
+
+        var buyerRequest = new com.os.yerinial.model.dto.payment.request.CreatePaymentRequest.BuyerRequest(
+                String.valueOf(customer.getId()),
+                customer.getName(),
+                customer.getSurname(),
+                customer.getPhoneNumber(),
+                customer.getEmail(),
+                "11111111111",
+                reservationRequest.billingAddress().address(),
+                reservationRequest.ipAddress(),
+                reservationRequest.billingAddress().city(),
+                reservationRequest.billingAddress().country(),
+                reservationRequest.billingAddress().zipCode()
+        );
+
+        return new com.os.yerinial.model.dto.payment.request.CreatePaymentRequest(
+                customer.getId(),
+                java.util.UUID.randomUUID().toString(),
+                totalPrice,
+                totalPrice,
+                "TRY",
+                1,
+                String.valueOf(reservation.getId()),
+
+                new com.os.yerinial.model.dto.payment.request.CreatePaymentRequest.PaymentCardRequest(
+                        reservationRequest.paymentCard().cardHolderName(),
+                        reservationRequest.paymentCard().cardNumber(),
+                        reservationRequest.paymentCard().expireMonth(),
+                        reservationRequest.paymentCard().expireYear(),
+                        reservationRequest.paymentCard().cvc(),
+                        reservationRequest.paymentCard().registerCard()
+                ),
+                buyerRequest,
+                new com.os.yerinial.model.dto.payment.request.CreatePaymentRequest.AddressRequest(
+                        reservationRequest.billingAddress().contactName(),
+                        reservationRequest.billingAddress().city(),
+                        reservationRequest.billingAddress().country(),
+                        reservationRequest.billingAddress().address(),
+                        reservationRequest.billingAddress().zipCode()
+                ),
+                new com.os.yerinial.model.dto.payment.request.CreatePaymentRequest.AddressRequest(
+                        reservationRequest.billingAddress().contactName(),
+                        reservationRequest.billingAddress().city(),
+                        reservationRequest.billingAddress().country(),
+                        reservationRequest.billingAddress().address(),
+                        reservationRequest.billingAddress().zipCode()
+                ),
+                basketItems
+        );
     }
 }

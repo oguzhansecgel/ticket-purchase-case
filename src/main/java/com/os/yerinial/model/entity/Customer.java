@@ -21,6 +21,8 @@ public class Customer extends BaseEntity{
     @Email
     private String email;
     private String name;
+    private String surname;
+    private String phoneNumber;
     @OneToMany(mappedBy = "customer", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Reservation> reservations = new ArrayList<>();
 }

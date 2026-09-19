@@ -1,0 +1,3 @@
+ALTER TABLE customers
+    ADD COLUMN surname VARCHAR(255) NOT NULL,
+    ADD COLUMN phone_number VARCHAR(11) NOT NULL;

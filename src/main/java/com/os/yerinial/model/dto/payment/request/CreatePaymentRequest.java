@@ -25,7 +25,19 @@ public record CreatePaymentRequest(
             String expireYear,
             String cvc,
             Integer registerCard
-    ) {}
+    ) {
+        @Override
+        public String toString() {
+            return "PaymentCardRequest{" +
+                    "cardHolderName='" + cardHolderName + '\'' +
+                    ", cardNumber='" + cardNumber.substring(0,7)+ "****" + '\'' +
+                    ", expireMonth='" + expireMonth + '\'' +
+                    ", expireYear='" + expireYear + '\'' +
+                    ", cvc='***" + '\'' +
+                    ", registerCard=" + registerCard +
+                    '}';
+        }
+    }
 
     public record BuyerRequest(
             String id,

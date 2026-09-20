@@ -12,6 +12,8 @@ import com.os.yerinial.model.repository.CustomerRepository;
 import com.os.yerinial.model.repository.EventRepository;
 import com.os.yerinial.model.repository.ReservationRepository;
 import io.micrometer.core.instrument.binder.http.Outcome;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -23,77 +25,53 @@ import java.util.List;
 @Service
 public class ReservationService {
 
+    private static final Logger log = LoggerFactory.getLogger(ReservationService.class);
+
     private final EventRepository eventRepository;
     private final CustomerRepository customerRepository;
     private final ReservationRepository reservationRepository;
     private final ReservationMetrics reservationMetrics;
     private final PaymentService paymentService;
+    private final ReservationBookingService reservationBookingService;
+
     public ReservationService(EventRepository eventRepository,
                               CustomerRepository customerRepository,
                               ReservationRepository reservationRepository,
                               ReservationMetrics reservationMetrics,
-                              PaymentService paymentService) {
+                              PaymentService paymentService,
+                              ReservationBookingService reservationBookingService) {
         this.eventRepository = eventRepository;
         this.customerRepository = customerRepository;
         this.reservationRepository = reservationRepository;
         this.reservationMetrics = reservationMetrics;
         this.paymentService = paymentService;
+        this.reservationBookingService = reservationBookingService;
     }
 
-    @Transactional
     public CreateReservationSummaryResponse createReservation(CreateReservationRequest request) {
-        Customer existingCustomer = customerRepository.findById(request.customerId())
-                .orElseThrow(() -> new NotFoundException("customer not found id: " + request.customerId()));
 
-        Event existingEvent = eventRepository.findByIdForUpdate(request.eventId())
-                .orElseThrow(() -> new NotFoundException("event not found id: " + request.eventId()));
+        Reservation reservation = reservationBookingService.reserve(request);
 
-        if (request.ticketCount() <= 0) {
-            throw new InvalidTicketCountException("Invalid ticket count");
+        Customer customer = reservation.getCustomer();
+        Event event = reservation.getEvent();
+
+        try {
+            paymentService.createPayment(preparePaymentRequest(request, customer, event, reservation));
+        } catch (RuntimeException e) {
+            reservationBookingService.release(reservation.getId());
+            log.error("Odeme alinamadi, kapasite iade edildi. reservationId={}", reservation.getId(), e);
+            throw e;
         }
 
-        if (existingEvent.getStatus() != EventStatus.ACTIVE) {
-            throw new EventNotActiveException("event not active");
-        }
-
-        if (existingEvent.getEventDate().isBefore(Instant.now())) {
-            throw new EventDateExpiredException("event date expired");
-        }
-
-        if (existingEvent.getAvailableCapacity() < request.ticketCount()) {
-            throw new InsufficientCapacityException("insufficient stock");
-        }
-
-        existingEvent.setAvailableCapacity(
-                existingEvent.getAvailableCapacity() - request.ticketCount()
-        );
-
-        if (existingEvent.getAvailableCapacity() == 0) {
-            existingEvent.setStatus(EventStatus.SOLD_OUT);
-        }
-
-        BigDecimal totalPrice = existingEvent.getPrice().multiply(BigDecimal.valueOf(request.ticketCount()));
-        Reservation createdReservation = new Reservation();
-        createdReservation.setCustomer(existingCustomer);
-        createdReservation.setEvent(existingEvent);
-        createdReservation.setTicketCount(request.ticketCount());
-        createdReservation.setTotalPrice(totalPrice);
-
-        var paymentRequest = preparePaymentRequest(request, existingCustomer, existingEvent, createdReservation);
-        paymentService.createPayment(paymentRequest);
-        createdReservation.setStatus(ReservationStatus.CONFIRMED);
-
-        reservationRepository.save(createdReservation);
+        // 2. transaction.
+        reservationBookingService.confirm(reservation.getId());
         reservationMetrics.reservationOperationIncrement(ReservationMetricOperation.CREATE, MetricsOutcome.SUCCESS);
 
-        if (createdReservation.getEvent().getAvailableCapacity() == 0) {
-            createdReservation.getEvent().setStatus(EventStatus.SOLD_OUT);
-        }
-        return new CreateReservationSummaryResponse(existingEvent.getId(),
-                existingCustomer.getId(),
-                existingEvent.getName(),
-                totalPrice,
-                request.ticketCount()
+        return new CreateReservationSummaryResponse(event.getId(),
+                customer.getId(),
+                event.getName(),
+                reservation.getTotalPrice(),
+                reservation.getTicketCount()
         );
     }
 
@@ -110,7 +88,7 @@ public class ReservationService {
             throw new ReservationAlreadyCancelledException("Already reservation cancelled");
         }
 
-        if(reservation.getEvent().getEventDate().isBefore(Instant.now().plus(23, ChronoUnit.HOURS).plus(59, ChronoUnit.MINUTES))) {
+        if (reservation.getEvent().getEventDate().isBefore(Instant.now().plus(23, ChronoUnit.HOURS).plus(59, ChronoUnit.MINUTES))) {
             throw new ReservationCancellationTooLateException("Reservation not cancelled last 24 hours");
         }
 
@@ -127,7 +105,7 @@ public class ReservationService {
         reservation.setStatus(ReservationStatus.CANCELLED);
     }
 
-    private com.os.yerinial.model.dto.payment.request.CreatePaymentRequest preparePaymentRequest(
+    private CreatePaymentRequest preparePaymentRequest(
             CreateReservationRequest reservationRequest,
             Customer customer,
             Event event,
@@ -159,6 +137,7 @@ public class ReservationService {
                 reservationRequest.billingAddress().country(),
                 reservationRequest.billingAddress().zipCode()
         );
+
 
         return new com.os.yerinial.model.dto.payment.request.CreatePaymentRequest(
                 customer.getId(),

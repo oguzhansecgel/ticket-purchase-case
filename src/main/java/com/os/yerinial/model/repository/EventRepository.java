@@ -4,6 +4,9 @@ import com.os.yerinial.model.dto.event.response.GetEventById;
 import com.os.yerinial.model.dto.event.response.GetEventDetails;
 import com.os.yerinial.model.entity.Event;
 import jakarta.persistence.LockModeType;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.data.jpa.repository.*;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -46,4 +49,8 @@ public interface EventRepository extends JpaRepository<Event, Long>, JpaSpecific
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select e from Event e where e.id = :eventId")
     Optional<Event> findByIdForUpdate(@Param("eventId") Long eventId);
+
+    @Override
+    @EntityGraph(attributePaths = {"venue"})
+    Page<Event> findAll(Specification<Event> spec, Pageable pageable);
 }

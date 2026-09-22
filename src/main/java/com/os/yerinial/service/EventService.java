@@ -14,6 +14,7 @@ import com.os.yerinial.model.repository.VenueRepository;
 import jakarta.persistence.criteria.Predicate;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
@@ -78,6 +79,7 @@ public class EventService {
         eventRepository.save(event);
     }
 
+    @Cacheable(value = "getEventDetailsById", key = "#eventId")
     public GetEventDetails getEventDetailsById(long eventId) {
         return eventRepository.findActiveEventById(eventId).orElseThrow(() -> new NotFoundException("event not found id: " + eventId));
     }

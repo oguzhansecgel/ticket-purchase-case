@@ -14,6 +14,7 @@ import com.os.yerinial.model.repository.ReservationRepository;
 import io.micrometer.core.instrument.binder.http.Outcome;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -48,6 +49,7 @@ public class ReservationService {
         this.reservationBookingService = reservationBookingService;
     }
 
+    @CacheEvict(value = "getEventDetailsById", key = "#request.eventId()")
     public CreateReservationSummaryResponse createReservation(CreateReservationRequest request) {
 
         Reservation reservation = reservationBookingService.reserve(request);
@@ -76,6 +78,7 @@ public class ReservationService {
     }
 
     @Transactional
+    @CacheEvict(value = "getEventDetailsById", key = "#request.eventId()")
     public void cancelReservation(Long reservationId) {
         Reservation reservation = reservationRepository.findByIdWithEvent(reservationId)
                 .orElseThrow(() -> new NotFoundException("reservation not found id: " + reservationId));

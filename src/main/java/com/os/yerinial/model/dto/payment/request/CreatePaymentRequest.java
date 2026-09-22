@@ -30,12 +30,21 @@ public record CreatePaymentRequest(
         public String toString() {
             return "PaymentCardRequest{" +
                     "cardHolderName='" + cardHolderName + '\'' +
-                    ", cardNumber='" + cardNumber.substring(0,7)+ "****" + '\'' +
+                    ", cardNumber='" + maskCardNumber(cardNumber) + '\'' +
                     ", expireMonth='" + expireMonth + '\'' +
                     ", expireYear='" + expireYear + '\'' +
-                    ", cvc='***" + '\'' +
+                    ", cvc='***'" +
                     ", registerCard=" + registerCard +
                     '}';
+        }
+
+        private static String maskCardNumber(String cardNumber) {
+            if (cardNumber == null || cardNumber.length() < 10) {
+                return "****";
+            }
+            return cardNumber.substring(0, 6)
+                    + "******"
+                    + cardNumber.substring(cardNumber.length() - 4);
         }
     }
 

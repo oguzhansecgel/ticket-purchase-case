@@ -24,10 +24,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Locale;
-import java.util.Objects;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 public class EventService {
@@ -42,6 +40,10 @@ public class EventService {
         this.venueRepository = venueRepository;
     }
 
+    @Cacheable(
+            value = "events",
+            key = "{#city == null ? null : #city.toLowerCase(), #eventDateStart, #eventDateEnd, #status, #pageNumber, #pageSize}"
+    )
     public List<GetEventResponse> getEventList(String city, Instant eventDateStart, Instant eventDateEnd, EventStatus status, int pageNumber, int pageSize) {
         String upperCityName = city != null ? city.substring(0, 1).toUpperCase(Locale.ROOT) + city.substring(1) : city;
         PageRequest of = PageRequest.of(pageNumber, pageSize, Sort.by(Sort.Direction.ASC, "id"));
@@ -59,7 +61,7 @@ public class EventService {
                         event.getStatus()
 
                 ))
-                .toList();
+                .collect(Collectors.toCollection(ArrayList::new));
     }
 
     public void createEvent(CreateEventRequest request) {

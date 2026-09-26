@@ -9,7 +9,7 @@ import org.springframework.data.redis.serializer.GenericJacksonJsonRedisSerializ
 import org.springframework.data.redis.serializer.RedisSerializationContext;
 import org.springframework.data.redis.serializer.RedisSerializer;
 import org.springframework.data.redis.serializer.StringRedisSerializer;
-import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.jsontype.BasicPolymorphicTypeValidator;
 
 import java.time.Duration;
 
@@ -18,10 +18,17 @@ import java.time.Duration;
 public class CacheConfig {
 
     @Bean
-    public RedisCacheManagerBuilderCustomizer cacheCustomizer(ObjectMapper objectMapper) {
+    public RedisCacheManagerBuilderCustomizer cacheCustomizer() {
+
+        BasicPolymorphicTypeValidator validator =
+                BasicPolymorphicTypeValidator.builder()
+                        .allowIfSubType(Object.class)
+                        .build();
 
         RedisSerializer<Object> jsonSerializer =
-                new GenericJacksonJsonRedisSerializer(objectMapper);
+                GenericJacksonJsonRedisSerializer.builder()
+                        .enableDefaultTyping(validator)
+                        .build();
 
         RedisCacheConfiguration base =
                 RedisCacheConfiguration.defaultCacheConfig()
@@ -52,6 +59,10 @@ public class CacheConfig {
                 .withCacheConfiguration(
                         "cities",
                         base.entryTtl(Duration.ofHours(24))
+                )
+                .withCacheConfiguration(
+                        "events",
+                        base.entryTtl(Duration.ofMinutes(5))
                 );
     }
 }

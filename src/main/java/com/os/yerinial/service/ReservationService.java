@@ -1,6 +1,9 @@
 package com.os.yerinial.service;
 
-import com.os.yerinial.exception.*;
+import com.os.yerinial.exception.EventHasBeenCompletedException;
+import com.os.yerinial.exception.NotFoundException;
+import com.os.yerinial.exception.ReservationAlreadyCancelledException;
+import com.os.yerinial.exception.ReservationCancellationTooLateException;
 import com.os.yerinial.metrics.MetricsOutcome;
 import com.os.yerinial.metrics.ReservationMetricOperation;
 import com.os.yerinial.metrics.ReservationMetrics;
@@ -8,10 +11,7 @@ import com.os.yerinial.model.dto.payment.request.CreatePaymentRequest;
 import com.os.yerinial.model.dto.reservation.request.CreateReservationRequest;
 import com.os.yerinial.model.dto.reservation.response.CreateReservationSummaryResponse;
 import com.os.yerinial.model.entity.*;
-import com.os.yerinial.model.repository.CustomerRepository;
-import com.os.yerinial.model.repository.EventRepository;
 import com.os.yerinial.model.repository.ReservationRepository;
-import io.micrometer.core.instrument.binder.http.Outcome;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.cache.annotation.CacheEvict;
@@ -28,28 +28,22 @@ public class ReservationService {
 
     private static final Logger log = LoggerFactory.getLogger(ReservationService.class);
 
-    private final EventRepository eventRepository;
-    private final CustomerRepository customerRepository;
     private final ReservationRepository reservationRepository;
     private final ReservationMetrics reservationMetrics;
     private final PaymentService paymentService;
     private final ReservationBookingService reservationBookingService;
 
-    public ReservationService(EventRepository eventRepository,
-                              CustomerRepository customerRepository,
-                              ReservationRepository reservationRepository,
+    public ReservationService(ReservationRepository reservationRepository,
                               ReservationMetrics reservationMetrics,
                               PaymentService paymentService,
                               ReservationBookingService reservationBookingService) {
-        this.eventRepository = eventRepository;
-        this.customerRepository = customerRepository;
         this.reservationRepository = reservationRepository;
         this.reservationMetrics = reservationMetrics;
         this.paymentService = paymentService;
         this.reservationBookingService = reservationBookingService;
     }
 
-    @CacheEvict(value = "getEventDetailsById", key = "#request.eventId()")
+    @CacheEvict(value = "customer-reservations", key = "#request.eventId()")
     public CreateReservationSummaryResponse createReservation(CreateReservationRequest request) {
 
         Reservation reservation = reservationBookingService.reserve(request);
@@ -78,7 +72,7 @@ public class ReservationService {
     }
 
     @Transactional
-    @CacheEvict(value = "getEventDetailsById", key = "#request.eventId()")
+    @CacheEvict(value = "customer-reservations", key = "#reservationId")
     public void cancelReservation(Long reservationId) {
         Reservation reservation = reservationRepository.findByIdWithEvent(reservationId)
                 .orElseThrow(() -> new NotFoundException("reservation not found id: " + reservationId));

@@ -23,6 +23,9 @@ public interface ReservationRepository extends JpaRepository<Reservation, Long> 
                                                                               e.id,
                                                                               r.customer.id,
                                                                               e.name,
+                                                                              e.eventDate,
+                                                                              e.venue.name,
+                                                                              e.venue.city,
                                                                               r.totalPrice,
                                                                               r.ticketCount,
                                                                               r.status) from Reservation r

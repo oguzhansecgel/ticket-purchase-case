@@ -27,9 +27,9 @@ public class ReservationController {
         return reservationService.createReservation(request);
     }
 
-    @PatchMapping("/cancelled/{reservationId}")
-    public void cancelledReservation(@PathVariable("reservationId") Long reservationId) {
+    @PatchMapping("/cancelled/{reservationId}/{customerId}")
+    public void cancelledReservation(@PathVariable("reservationId") Long reservationId, @PathVariable("customerId") Long customerId) {
         logger.info(API_URL + "/cancelled/{reservationId} incoming request -> {}", reservationId);
-        reservationService.cancelReservation(reservationId);
+        reservationService.cancelReservation(reservationId, customerId);
     }
 }

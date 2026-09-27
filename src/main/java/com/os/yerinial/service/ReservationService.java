@@ -1,9 +1,6 @@
 package com.os.yerinial.service;
 
-import com.os.yerinial.exception.EventHasBeenCompletedException;
-import com.os.yerinial.exception.NotFoundException;
-import com.os.yerinial.exception.ReservationAlreadyCancelledException;
-import com.os.yerinial.exception.ReservationCancellationTooLateException;
+import com.os.yerinial.exception.*;
 import com.os.yerinial.metrics.MetricsOutcome;
 import com.os.yerinial.metrics.ReservationMetricOperation;
 import com.os.yerinial.metrics.ReservationMetrics;
@@ -43,7 +40,7 @@ public class ReservationService {
         this.reservationBookingService = reservationBookingService;
     }
 
-    @CacheEvict(value = "customer-reservations", key = "#request.eventId()")
+    @CacheEvict(value = "customer-reservations", key = "#request.customerId()")
     public CreateReservationSummaryResponse createReservation(CreateReservationRequest request) {
 
         Reservation reservation = reservationBookingService.reserve(request);
@@ -53,13 +50,12 @@ public class ReservationService {
 
         try {
             paymentService.createPayment(preparePaymentRequest(request, customer, event, reservation));
-        } catch (RuntimeException e) {
+        } catch (FailedPaymentException _) {
             reservationBookingService.release(reservation.getId());
-            log.error("Odeme alinamadi, kapasite iade edildi. reservationId={}", reservation.getId(), e);
-            throw e;
+            throw new FailedPaymentException(
+                    "Payment failed, capacity released. reservationId=" + reservation.getId());
         }
 
-        // 2. transaction.
         reservationBookingService.confirm(reservation.getId());
         reservationMetrics.reservationOperationIncrement(ReservationMetricOperation.CREATE, MetricsOutcome.SUCCESS);
 
@@ -72,8 +68,8 @@ public class ReservationService {
     }
 
     @Transactional
-    @CacheEvict(value = "customer-reservations", key = "#reservationId")
-    public void cancelReservation(Long reservationId) {
+    @CacheEvict(value = "customer-reservations", key = "#customerId")
+    public void cancelReservation(Long reservationId, Long customerId) {
         Reservation reservation = reservationRepository.findByIdWithEvent(reservationId)
                 .orElseThrow(() -> new NotFoundException("reservation not found id: " + reservationId));
 

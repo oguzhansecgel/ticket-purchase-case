@@ -5,9 +5,11 @@ import com.os.yerinial.metrics.MetricsOutcome;
 import com.os.yerinial.metrics.ReservationMetricOperation;
 import com.os.yerinial.metrics.ReservationMetrics;
 import com.os.yerinial.model.dto.payment.request.CreatePaymentRequest;
+import com.os.yerinial.model.dto.paymentDetails.response.IyzicoPaymetResponse;
 import com.os.yerinial.model.dto.reservation.request.CreateReservationRequest;
 import com.os.yerinial.model.dto.reservation.response.CreateReservationSummaryResponse;
 import com.os.yerinial.model.entity.*;
+import com.os.yerinial.model.repository.PaymentDetailRepository;
 import com.os.yerinial.model.repository.ReservationRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -19,6 +21,9 @@ import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
+import java.util.concurrent.TimeoutException;
 
 @Service
 public class ReservationService {
@@ -29,34 +34,53 @@ public class ReservationService {
     private final ReservationMetrics reservationMetrics;
     private final PaymentService paymentService;
     private final ReservationBookingService reservationBookingService;
+    private final PaymentDetailRepository paymentDetailRepository;
 
     public ReservationService(ReservationRepository reservationRepository,
                               ReservationMetrics reservationMetrics,
                               PaymentService paymentService,
-                              ReservationBookingService reservationBookingService) {
+                              ReservationBookingService reservationBookingService,
+                              PaymentDetailRepository paymentDetailRepository) {
         this.reservationRepository = reservationRepository;
         this.reservationMetrics = reservationMetrics;
         this.paymentService = paymentService;
         this.reservationBookingService = reservationBookingService;
+        this.paymentDetailRepository = paymentDetailRepository;
     }
+
 
     @CacheEvict(value = "customer-reservations", key = "#request.customerId()")
     public CreateReservationSummaryResponse createReservation(CreateReservationRequest request) {
 
         Reservation reservation = reservationBookingService.reserve(request);
+        PaymentDetails paymentDetails = new PaymentDetails();
+        paymentDetails.setReservationId(reservation.getId());
+        paymentDetails.setPaymentStatus(PaymentStatus.WAITING);
 
         Customer customer = reservation.getCustomer();
         Event event = reservation.getEvent();
 
         try {
-            paymentService.createPayment(preparePaymentRequest(request, customer, event, reservation));
-        } catch (FailedPaymentException _) {
+            CompletableFuture<IyzicoPaymetResponse> futureResponse = paymentService.createPayment(preparePaymentRequest(request, customer, event, reservation));
+            IyzicoPaymetResponse response = futureResponse.join();
+            paymentDetails.setPaymentConversationId(response.paymentConversationId());
+            paymentDetails.setPaymentId(response.paymentId());
+            paymentDetails.setPaymentStatus(PaymentStatus.SUCCESS);
+        } catch (CompletionException e) {
             reservationBookingService.release(reservation.getId());
-            throw new FailedPaymentException(
-                    "Payment failed, capacity released. reservationId=" + reservation.getId());
+            paymentDetails.setPaymentStatus(PaymentStatus.FAILED);
+            if (e.getCause() instanceof TimeoutException) {
+
+                throw new OutServiceTimeOutException(
+                        "Ödeme servisi belirlenen süre içerisinde cevap vermedi."
+                );
+            }
+
+            throw e;
         }
 
         reservationBookingService.confirm(reservation.getId());
+        paymentDetailRepository.save(paymentDetails);
         reservationMetrics.reservationOperationIncrement(ReservationMetricOperation.CREATE, MetricsOutcome.SUCCESS);
 
         return new CreateReservationSummaryResponse(event.getId(),

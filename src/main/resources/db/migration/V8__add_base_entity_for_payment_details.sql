@@ -1,0 +1,4 @@
+ALTER TABLE payment_details
+    ADD COLUMN is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    ADD COLUMN created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    ADD COLUMN updated_at TIMESTAMPTZ;

@@ -1,14 +1,17 @@
 package com.os.yerinial.service;
 
+import com.os.yerinial.exception.BusinessException;
 import com.os.yerinial.model.dto.customer.response.GetCustomerReservationResponse;
-import com.os.yerinial.model.entity.Reservation;
+import com.os.yerinial.model.entity.ReservationStatus;
 import com.os.yerinial.model.repository.CustomerRepository;
 import com.os.yerinial.model.repository.EventRepository;
 import com.os.yerinial.model.repository.ReservationRepository;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 
+import java.util.Arrays;
 import java.util.List;
+import java.util.Locale;
 
 @Service
 public class CustomerService {
@@ -23,8 +26,8 @@ public class CustomerService {
         this.reservationRepository = reservationRepository;
     }
 
-    @Cacheable(value = "customer-reservations", key = "#customerId")
-    public List<GetCustomerReservationResponse> getCustomerReservation(Long customerId) {
-        return reservationRepository.getAllByCustomer_Id(customerId);
+    @Cacheable(value = "customer-reservations", key = "#customerId + ':' + #reservationStatus")
+    public List<GetCustomerReservationResponse> getCustomerReservation(Long customerId, String reservationStatus) {
+        return reservationRepository.getAllByCustomer_Id(customerId, ReservationStatus.valueOf(reservationStatus));
     }
 }

@@ -50,3 +50,25 @@ iyzico:
     api-key: ${API_KEY}
     secret-key: ${SECRET_KEY}
     base-url: ${BASE_URL}
+
+resilience4j:
+  timelimiter:
+    instances:
+      paymentService:
+        ##max 10 saniye.
+        timeout-duration: 10s
+        cancel-running-future: true
+  circuitbreaker:
+    instances:
+      paymentService:
+        ## son {n} çağrıya bak
+        sliding-window-size: 10
+        ## circiut açmak için görülmesi gereken request sayısı
+        minimum-number-of-calls: 5
+        ## hata oranı bu değerin üstüne çıkarsa circiut açılır
+        failure-rate-threshold: 50
+        ## circiut açıldıktan {n} saniye sonra rahat bırak
+        wait-duration-in-open-state: 30s
+        ## 30 saniye geçlince 3 request ile test et
+        permitted-number-of-calls-in-half-open-state: 3
+        automatic-transition-from-open-to-half-open-enabled: true

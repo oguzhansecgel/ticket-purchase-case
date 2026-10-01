@@ -25,9 +25,9 @@ public class CustomerController {
         this.customerService = customerService;
     }
 
-    @GetMapping("/my-reservation/{customerId}")
-    public List<GetCustomerReservationResponse> getCustomerAllReservation(@PathVariable("customerId") Long customerId) {
-        logger.info(API_URL + "/my-reservation/{customerId} incoming request -> {}", customerId);
-        return customerService.getCustomerReservation(customerId);
+    @GetMapping("/my-reservation/{customerId}/{reservationStatus}")
+    public List<GetCustomerReservationResponse> getCustomerAllReservation(@PathVariable("customerId") Long customerId, @PathVariable("reservationStatus") String reservationStatus) {
+        logger.info(API_URL + "/my-reservation/{customerId}/{reservationStatus} incoming request -> {} {}", customerId, reservationStatus);
+        return customerService.getCustomerReservation(customerId, reservationStatus);
     }
 }

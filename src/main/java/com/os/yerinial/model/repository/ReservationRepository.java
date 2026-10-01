@@ -2,6 +2,7 @@ package com.os.yerinial.model.repository;
 
 import com.os.yerinial.model.dto.customer.response.GetCustomerReservationResponse;
 import com.os.yerinial.model.entity.Reservation;
+import com.os.yerinial.model.entity.ReservationStatus;
 import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
@@ -31,8 +32,9 @@ public interface ReservationRepository extends JpaRepository<Reservation, Long> 
                                                                               r.status) from Reservation r
                     JOIN r.event e
                     where r.customer.id = :customerId
+                    AND r.status = :status
             """)
-    List<GetCustomerReservationResponse> getAllByCustomer_Id(@Param("customerId") long customerId);
+    List<GetCustomerReservationResponse> getAllByCustomer_Id(@Param("customerId") long customerId, @Param("status") ReservationStatus status);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("""

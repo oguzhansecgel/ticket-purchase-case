@@ -1,9 +1,22 @@
 package com.os.yerinial.service;
 
 import com.iyzipay.Options;
+import com.iyzipay.exception.HttpClientException;
 import com.iyzipay.model.*;
 import com.iyzipay.request.CreatePaymentRequest;
+import com.iyzipay.request.RetrievePaymentRequest;
 import com.os.yerinial.exception.FailedPaymentException;
+import com.os.yerinial.exception.OutServiceTimeOutException;
+import com.os.yerinial.exception.PaymentProviderUnavailableException;
+import com.os.yerinial.model.dto.paymentDetails.response.IyzicoPaymetResponse;
+import com.os.yerinial.model.entity.PaymentDetails;
+import com.os.yerinial.model.entity.PaymentStatus;
+import com.os.yerinial.model.entity.Reservation;
+import com.os.yerinial.model.entity.ReservationStatus;
+import com.os.yerinial.model.repository.PaymentDetailRepository;
+import com.os.yerinial.model.repository.ReservationRepository;
+import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
+import io.github.resilience4j.timelimiter.annotation.TimeLimiter;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -11,6 +24,8 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -24,7 +39,17 @@ public class PaymentService {
     @Value("${iyzico.payment.base-url}")
     private String BASE_URL;
 
-    public void createPayment(com.os.yerinial.model.dto.payment.request.CreatePaymentRequest paymentRequest) {
+    private final ReservationRepository reservationRepository;
+    private final PaymentDetailRepository paymentDetailRepository;
+
+    public PaymentService(ReservationRepository reservationRepository, PaymentDetailRepository paymentDetailRepository) {
+        this.reservationRepository = reservationRepository;
+        this.paymentDetailRepository = paymentDetailRepository;
+    }
+
+    @CircuitBreaker(name = "paymentService")
+    @TimeLimiter(name = "paymentService")
+    public CompletableFuture<IyzicoPaymetResponse> createPayment(com.os.yerinial.model.dto.payment.request.CreatePaymentRequest paymentRequest) {
 
         Options options = new Options();
         options.setApiKey(API_KEY);
@@ -105,14 +130,34 @@ public class PaymentService {
         }).collect(Collectors.toList());
 
         request.setBasketItems(basketItems);
+        return CompletableFuture.supplyAsync(() -> {
+            try {
+                Payment payment = Payment.create(request, options);
+                log.info(payment.getStatus());
+                log.info(payment.getErrorCode());
+                if (!"success".equalsIgnoreCase(payment.getStatus())) {
+                    throw new FailedPaymentException("Ödeme başarısız oldu: " + payment.getErrorMessage());
+                } else {
+                    log.info("Payment Success");
+                }
 
-        Payment payment = Payment.create(request, options);
-        log.info(payment.getStatus());
-        log.info(payment.getErrorCode());
-        if (!"success".equalsIgnoreCase(payment.getStatus())) {
-            throw new FailedPaymentException("Ödeme başarısız oldu: " + payment.getErrorMessage());
-        } else {
-            log.info("Payment Success");
-        }
+                return new IyzicoPaymetResponse(payment.getPaymentId(), payment.getConversationId());
+            } catch (HttpClientException e) {
+                log.error(
+                        "Iyzico bağlantı hatası. conversationId={}",
+                        paymentRequest.conversationId(),
+                        e
+                );
+                throw new PaymentProviderUnavailableException(
+                        "Ödeme servisine ulaşılamadı"
+                );
+            }
+        });
     }
+
+//    public void checkPaymentStatus() {
+//        List<Reservation> pendingPaymentReservation = reservationRepository.findReservationByStatus(ReservationStatus.PENDING_PAYMENT);
+//
+//    }
+
 }

@@ -43,6 +43,8 @@ public class CacheConfig {
                         .disableCachingNullValues();
 
         return builder -> builder
+                // transactional for redis
+                .transactionAware()
                 .cacheDefaults(base)
                 .withCacheConfiguration(
                         "getEventDetailsById",

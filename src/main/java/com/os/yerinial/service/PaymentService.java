@@ -154,10 +154,4 @@ public class PaymentService {
             }
         });
     }
-
-//    public void checkPaymentStatus() {
-//        List<Reservation> pendingPaymentReservation = reservationRepository.findReservationByStatus(ReservationStatus.PENDING_PAYMENT);
-//
-//    }
-
 }

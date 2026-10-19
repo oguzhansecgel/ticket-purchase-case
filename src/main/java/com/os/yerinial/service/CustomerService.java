@@ -26,7 +26,7 @@ public class CustomerService {
         this.reservationRepository = reservationRepository;
     }
 
-    @Cacheable(value = "customer-reservations", key = "#customerId + ':' + #reservationStatus")
+    @Cacheable(value = "customer-reservations", key = "#customerId +#reservationStatus")
     public List<GetCustomerReservationResponse> getCustomerReservation(Long customerId, String reservationStatus) {
         return reservationRepository.getAllByCustomer_Id(customerId, ReservationStatus.valueOf(reservationStatus));
     }

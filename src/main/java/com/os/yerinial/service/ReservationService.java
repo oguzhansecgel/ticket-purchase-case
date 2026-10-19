@@ -14,6 +14,7 @@ import com.os.yerinial.model.repository.ReservationRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Caching;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -49,7 +50,17 @@ public class ReservationService {
     }
 
 
-    @CacheEvict(value = "customer-reservations", key = "#request.customerId()")
+    @Transactional
+    @Caching(evict = {
+            @CacheEvict(
+                    value = "customer-reservations",
+                    key = "#request.customerId() + 'CONFIRMED'"
+            ),
+            @CacheEvict(
+                    value = "customer-reservations",
+                    key = "#request.customerId() + 'PENDING_PAYMENT'"
+            )
+    })
     public CreateReservationSummaryResponse createReservation(CreateReservationRequest request) {
 
         Reservation reservation = reservationBookingService.reserve(request);
@@ -92,7 +103,24 @@ public class ReservationService {
     }
 
     @Transactional
-    @CacheEvict(value = "customer-reservations", key = "#customerId")
+    @Caching(evict = {
+            @CacheEvict(
+                    value = "customer-reservations",
+                    key = "#customerId + 'CONFIRMED'"
+            ),
+            @CacheEvict(
+                    value = "customer-reservations",
+                    key = "#customerId + 'CANCELLED'"
+            ),
+            @CacheEvict(
+                    value = "customer-reservations",
+                    key = "#customerId + 'PENDING_PAYMENT'"
+            ),
+            @CacheEvict(
+                    value = "customer-reservations",
+                    key = "#customerId + 'PAYMENT_FAILED'"
+            )
+    })
     public void cancelReservation(Long reservationId, Long customerId) {
         Reservation reservation = reservationRepository.findByIdWithEvent(reservationId)
                 .orElseThrow(() -> new NotFoundException("reservation not found id: " + reservationId));

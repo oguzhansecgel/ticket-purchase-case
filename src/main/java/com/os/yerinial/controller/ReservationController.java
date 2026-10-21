@@ -6,7 +6,9 @@ import com.os.yerinial.service.ReservationService;
 import jakarta.validation.Valid;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 
 @RestController
 @RequestMapping("/api/v1/reservation")
@@ -24,6 +26,12 @@ public class ReservationController {
     @PostMapping("/create")
     public CreateReservationSummaryResponse post(@Valid @RequestBody CreateReservationRequest request) {
         logger.info(API_URL + "/create incoming request -> {}", request);
+//        logger.warn("TEST: Ödeme tamamlandı fakat response gönderilmiyor!");
+//
+//        throw new ResponseStatusException(
+//                HttpStatus.INTERNAL_SERVER_ERROR,
+//                "Simulated response failure"
+//        );
         return reservationService.createReservation(request);
     }
 

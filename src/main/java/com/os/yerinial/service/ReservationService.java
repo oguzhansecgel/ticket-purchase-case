@@ -49,8 +49,6 @@ public class ReservationService {
         this.paymentDetailRepository = paymentDetailRepository;
     }
 
-
-    @Transactional
     @Caching(evict = {
             @CacheEvict(
                     value = "customer-reservations",
@@ -125,11 +123,17 @@ public class ReservationService {
         Reservation reservation = reservationRepository.findByIdWithEvent(reservationId)
                 .orElseThrow(() -> new NotFoundException("reservation not found id: " + reservationId));
 
+        if(reservation.getCustomer().getId() != customerId) {
+            throw new ReservationNotFoundException("You do not have this reservation");
+        }
+
         if (reservation.getEvent().getStatus() == EventStatus.COMPLETED) {
             throw new EventHasBeenCompletedException("Event has been completed");
         }
 
-        if (reservation.getStatus() == ReservationStatus.CANCELLED) {
+        if (reservation.getStatus() == ReservationStatus.CANCELLED ||
+                reservation.getStatus() == ReservationStatus.PENDING_PAYMENT ||
+                reservation.getStatus() == ReservationStatus.PAYMENT_FAILED) {
             throw new ReservationAlreadyCancelledException("Already reservation cancelled");
         }
 
